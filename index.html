@@ -13,8 +13,6 @@
             margin: 0;
             padding: 0;
         }
-
-        /* Container da ferramenta principal */
         #tool-container {
             width: 100%;
             max-width: 600px;
@@ -22,23 +20,19 @@
             box-sizing: border-box;
             text-align: center;
         }
-        
-        /* Bloco de segurança que fica escondido por padrão */
         #security-block {
-            display: none; /* Começa escondido */
+            display: none;
             padding: 2rem;
             text-align: center;
             font-weight: bold;
             color: #d93025;
         }
-
         h1 {
             color: #1a73e8;
             font-size: 1.8em;
             margin-top: 0;
             margin-bottom: 0.5rem;
         }
-        
         p { margin-bottom: 1.5rem; }
         #audioFileInput, #outputFormatSelect, #convertButton { display: block; width: 100%; margin-top: 1rem; padding: 0.8rem; border-radius: 4px; border: 1px solid #ddd; font-size: 1rem; box-sizing: border-box; }
         #convertButton { background-color: #1a73e8; color: white; border: none; cursor: pointer; transition: background-color 0.3s; }
@@ -50,34 +44,27 @@
 </head>
 <body>
 
-    <!-- Container da ferramenta que será escondido se o domínio for inválido -->
     <div id="tool-container">
         <h1>Conversor de Áudio</h1>
         <p>Selecione um arquivo (WAV ou MP3) e o formato de destino.</p>
-
         <input type="file" id="audioFileInput" accept=".mp3,.wav">
         <select id="outputFormatSelect">
             <option value="mp3">Para MP3</option>
             <option value="wav">Para WAV</option>
         </select>
         <button id="convertButton">Converter</button>
-
         <div id="output"></div>
     </div>
 
-    <!-- Mensagem de erro que será mostrada se o acesso for inválido -->
     <div id="security-block">
         <p>Esta ferramenta está disponível exclusivamente em omniholopanto.blogspot.com.</p>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/lamejs@1.2.0/lame.min.js"></script>
     <script>
-        // --- INÍCIO DO SCRIPT DE SEGURANÇA ---
+        // --- INÍCIO DO SCRIPT DE SEGURANÇA (VERSÃO CORRIGIDA) ---
 
-        // Domínio do seu blog já configurado.
-        const allowedDomains = [
-            'omniholopanto.blogspot.com'
-        ];
+        const allowedDomain = 'omniholopanto.blogspot.com';
 
         function runSecurityCheck() {
             const toolContainer = document.getElementById('tool-container');
@@ -85,11 +72,13 @@
             let isAllowed = false;
 
             try {
-                // Verifica se a página está dentro de um iframe
                 if (window.top !== window.self) {
-                    // Verifica se o domínio pai está na lista de permissões
                     const parentHostname = window.top.location.hostname;
-                    if (allowedDomains.includes(parentHostname)) {
+                    
+                    // LÓGICA CORRIGIDA:
+                    // Verifica se o endereço do blog é uma correspondência exata OU
+                    // se ele termina com ".omniholopanto.blogspot.com" para cobrir as variações de país.
+                    if (parentHostname === allowedDomain || parentHostname.endsWith('.' + allowedDomain)) {
                         isAllowed = true;
                     }
                 }
@@ -109,7 +98,7 @@
         // --- FIM DO SCRIPT DE SEGURANÇA ---
 
 
-        // Lógica de conversão
+        // Lógica de conversão (sem alterações)
         document.getElementById('convertButton').addEventListener('click', () => {
             const audioFileInput = document.getElementById('audioFileInput');
             const outputFormat = document.getElementById('outputFormatSelect').value;
@@ -212,7 +201,6 @@
             link.innerHTML = `Baixar ${filename}`;
             outputDiv.appendChild(link);
         }
-
     </script>
 </body>
-</html>
+</html>```
