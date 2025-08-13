@@ -1,56 +1,122 @@
+<!-- CÓDIGO DA FERRAMENTA PARA O GITHUB PAGES (VERSÃO FINAL) -->
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Diagnóstico de Domínio</title>
+    <title>Conversor de Áudio</title>
     <style>
-        body { font-family: sans-serif; text-align: center; padding: 2rem; }
-        #security-block { color: #c0392b; font-weight: bold; }
-        #debug-info { 
-            margin-top: 1rem;
-            font-family: monospace; 
-            background: #f0f0f0; 
-            padding: 10px; 
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            word-wrap: break-word;
-        }
+        body { background-color: transparent; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color: #333; line-height: 1.5; margin: 0; padding: 0; }
+        #tool-container { display: none; /* Começa escondido até ser validado */ width: 100%; max-width: 600px; padding: 1.5rem 1rem; box-sizing: border-box; text-align: center; }
+        #security-block { display: block; /* Começa visível */ padding: 2rem; text-align: center; font-weight: bold; color: #d93025; }
+        h1 { color: #1a73e8; font-size: 1.8em; margin-top: 0; margin-bottom: 0.5rem; }
+        p { margin-bottom: 1.5rem; }
+        #audioFileInput, #outputFormatSelect, #convertButton { display: block; width: 100%; margin-top: 1rem; padding: 0.8rem; border-radius: 4px; border: 1px solid #ddd; font-size: 1rem; box-sizing: border-box; }
+        #convertButton { background-color: #1a73e8; color: white; border: none; cursor: pointer; transition: background-color 0.3s; }
+        #output { margin-top: 1.5rem; font-weight: bold; word-wrap: break-word; }
+        #output a { display: inline-block; background-color: #28a745; color: white; padding: 0.8rem 1.5rem; border-radius: 4px; text-decoration: none; margin-top: 0.5rem; }
     </style>
 </head>
 <body>
-
-    <div id="security-block">
-        <p>Acesso bloqueado. Por favor, reporte a seguinte informação:</p>
-        <div id="debug-info">Aguardando verificação...</div>
+    <div id="tool-container">
+        <h1>Conversor de Áudio</h1>
+        <p>Selecione um arquivo (WAV ou MP3) e o formato de destino.</p>
+        <input type="file" id="audioFileInput" accept=".mp3,.wav">
+        <select id="outputFormatSelect">
+            <option value="mp3">Para MP3</option>
+            <option value="wav">Para WAV</option>
+        </select>
+        <button id="convertButton">Converter</button>
+        <div id="output"></div>
     </div>
+    <div id="security-block"><p>Esta ferramenta está disponível exclusivamente em omniholopanto.blogspot.com.</p></div>
 
+    <script src="https://cdn.jsdelivr.net/npm/lamejs@1.2.0/lame.min.js"></script>
     <script>
-        // SCRIPT DE DIAGNÓSTICO
-        function runDiagnostics() {
-            const debugInfo = document.getElementById('debug-info');
-            let parentHostname = '';
+        // --- INÍCIO DO SCRIPT DE SEGURANÇA COM POSTMESSAGE ---
+        const allowedOriginStart = 'https://omniholopanto.blogspot.'; // Nota: Inclui o ponto no final
 
-            try {
-                // Tenta acessar o hostname da página que contém o iframe
-                parentHostname = window.top.location.hostname;
-                
-                if (parentHostname) {
-                    debugInfo.textContent = 'Domínio detectado: ' + parentHostname;
-                } else {
-                    debugInfo.textContent = 'O domínio pai foi detectado como vazio.';
-                }
-
-            } catch (e) {
-                // Se der um erro, é a informação mais importante que precisamos
-                debugInfo.textContent = 'ERRO: Acesso ao domínio pai foi bloqueado por uma política de segurança (cross-origin). Isso significa que o iframe está em um "sandbox".';
-                console.error(e);
+        window.addEventListener('message', function(event) {
+            // Verifica se a mensagem veio de uma origem permitida (seu blog)
+            if (event.origin.startsWith(allowedOriginStart)) {
+                console.log('Origem validada:', event.origin);
+                // Esconde a mensagem de bloqueio e mostra a ferramenta
+                document.getElementById('security-block').style.display = 'none';
+                document.getElementById('tool-container').style.display = 'block';
+            } else {
+                console.warn('Mensagem recebida de uma origem não permitida:', event.origin);
             }
+        }, false);
+        // --- FIM DO SCRIPT DE SEGURANÇA ---
+
+        // O restante do código da ferramenta permanece aqui...
+        document.getElementById('convertButton').addEventListener('click', () => {
+            const audioFileInput = document.getElementById('audioFileInput');
+            const outputFormat = document.getElementById('outputFormatSelect').value;
+            const outputDiv = document.getElementById('output');
+            if (audioFileInput.files.length === 0) {
+                outputDiv.innerHTML = 'Por favor, selecione um arquivo de áudio.';
+                return;
+            }
+            outputDiv.innerHTML = 'Processando, por favor aguarde...';
+            const file = audioFileInput.files[0];
+            const reader = new FileReader();
+            reader.onload = async (event) => {
+                try {
+                    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                    const audioBuffer = await audioContext.decodeAudioData(event.target.result);
+                    if (outputFormat === 'mp3') {
+                        toMp3(audioBuffer);
+                    } else if (outputFormat === 'wav') {
+                        toWav(audioBuffer);
+                    }
+                } catch (e) {
+                    outputDiv.innerHTML = `Erro ao processar o arquivo. Tente um arquivo diferente.`;
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        });
+        function toMp3(audioBuffer) {
+            const mp3encoder = new lamejs.Mp3Encoder(1, audioBuffer.sampleRate, 128);
+            let samples = audioBuffer.getChannelData(0);
+            if (audioBuffer.numberOfChannels > 1) {
+                const rightSamples = audioBuffer.getChannelData(1);
+                const mixedSamples = new Float32Array(samples.length);
+                for (let i = 0; i < samples.length; i++) { mixedSamples[i] = (samples[i] + rightSamples[i]) / 2; }
+                samples = mixedSamples;
+            }
+            const samplesInt16 = new Int16Array(samples.length);
+            for (let i = 0; i < samples.length; i++) { samplesInt16[i] = samples[i] * 32767; }
+            const mp3Data = [];
+            for (let i = 0; i < samplesInt16.length; i += 1152) {
+                const frame = samplesInt16.subarray(i, i + 1152);
+                const mp3buf = mp3encoder.encodeBuffer(frame);
+                if (mp3buf.length > 0) { mp3Data.push(mp3buf); }
+            }
+            const flushed = mp3encoder.flush();
+            if (flushed.length > 0) { mp3Data.push(flushed); }
+            const blob = new Blob(mp3Data, {type: 'audio/mp3'});
+            displayDownloadLink(URL.createObjectURL(blob), 'audio_convertido.mp3');
         }
-
-        // Executa o diagnóstico assim que a página carrega
-        window.onload = runDiagnostics;
+        function toWav(audioBuffer) {
+            const samples = audioBuffer.getChannelData(0);
+            const buffer = new ArrayBuffer(44 + samples.length * 2);
+            const view = new DataView(buffer);
+            const write = (v, o, s) => { for (let i = 0; i < s.length; i++) v.setUint8(o + i, s.charCodeAt(i)); };
+            const pcm = (out, off, inp) => { for (let i = 0; i < inp.length; i++, off += 2) { const s = Math.max(-1, Math.min(1, inp[i])); out.setInt16(off, s < 0 ? s * 0x8000 : s * 0x7FFF, true); }};
+            write(view, 0, 'RIFF'); view.setUint32(4, 36 + samples.length * 2, true); write(view, 8, 'WAVE'); write(view, 12, 'fmt '); view.setUint32(16, 16, true); view.setUint16(20, 1, true); view.setUint16(22, 1, true); view.setUint32(24, audioBuffer.sampleRate, true); view.setUint32(28, audioBuffer.sampleRate * 2, true); view.setUint16(32, 2, true); view.setUint16(34, 16, true); write(view, 36, 'data'); view.setUint32(40, samples.length * 2, true); pcm(view, 44, samples);
+            const blob = new Blob([view], { type: 'audio/wav' });
+            displayDownloadLink(URL.createObjectURL(blob), 'audio_convertido.wav');
+        }
+        function displayDownloadLink(url, filename) {
+            const outputDiv = document.getElementById('output');
+            outputDiv.innerHTML = 'Conversão concluída! ';
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = filename;
+            link.innerHTML = `Baixar ${filename}`;
+            outputDiv.appendChild(link);
+        }
     </script>
-
 </body>
 </html>
